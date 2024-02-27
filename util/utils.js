@@ -939,13 +939,16 @@ function rewriteQueryOpAsAgg(op) {
  * @param {Object[]} indexes - A list of index specs to create on the collection.
  * @param {Object} collectionOptions - Options to use for view/collection creation.
  */
-function collectionPopulator(isView, nDocs, indexes, docGenerator, collectionOptions) {
+function collectionPopulator(isView, nDocs, indexes, docGenerator, collectionOptions, params) {
     return function(collectionOrView) {
         Random.setRandomSeed(258);
 
         collectionOrView.drop();
 
         var db = collectionOrView.getDB();
+        if (params) {
+            assert.commandWorked(db.adminCommand({setParameter: 1, ...params}));
+        }
         var collection;
         if (isView) {
             // 'collectionOrView' is a view, so specify a backing collection to serve as its
@@ -1009,8 +1012,9 @@ function addQueryTestCase(options) {
     tests.push({
         tags: ["query"].concat(tags),
         name: "Queries." + options.name,
-        pre: collectionPopulator(
-            !isView, options.nDocs, indexes, options.docs, options.collectionOptions),
+        pre: 
+            collectionPopulator(
+            !isView, options.nDocs, indexes, options.docs, options.collectionOptions, options.params),
         post: function(collection) {
             collection.drop();
         },
@@ -1022,7 +1026,7 @@ function addQueryTestCase(options) {
             tags: ["views", "query_identityview"].concat(tags),
             name: "Queries.IdentityView." + options.name,
             pre: collectionPopulator(
-                isView, options.nDocs, indexes, options.docs, options.collectionOptions),
+                isView, options.nDocs, indexes, options.docs, options.collectionOptions, options.params),
             post: function(view) {
                 view.drop();
                 var collName = view.getName() + "_BackingCollection";
@@ -1038,7 +1042,7 @@ function addQueryTestCase(options) {
             tags: ["agg_query_comparison"].concat(tags),
             name: "Aggregation." + options.name,
             pre: collectionPopulator(
-                !isView, options.nDocs, indexes, options.docs, options.collectionOptions),
+                !isView, options.nDocs, indexes, options.docs, options.collectionOptions, options.params),
             post: function(collection) {
                 collection.drop();
             },
